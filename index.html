@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudinary Upload Test</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        h2 {
+            color: #2c3e50;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #uploadedImages {
+            margin-top: 20px;
+        }
+        .image-preview {
+            max-width: 200px;
+            margin: 10px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cloudinary Upload Test</h1>
+    
+    <!-- Unsigned Upload -->
+    <div class="container">
+        <h2>1. Unsigned Upload</h2>
+        <p>This uses a simple upload preset without signature.</p>
+        <form id="unsigned-upload-form">
+            <input type="file" id="unsigned-file" accept="image/*">
+            <button type="button" id="unsigned-upload-btn">Upload Image</button>
+        </form>
+        <div id="unsigned-results">
+            <h3>Uploaded Image:</h3>
+            <div id="unsigned-image-preview"></div>
+            <div id="unsigned-image-url"></div>
+        </div>
+    </div>
+    
+    <!-- Signed Upload with Widget -->
+    <div class="container">
+        <h2>2. Signed Upload with Widget</h2>
+        <p>This uses Cloudinary's upload widget with signature.</p>
+        <button id="upload_widget" class="cloudinary-button">Upload files</button>
+        <div id="widget-results">
+            <h3>Uploaded Images:</h3>
+            <div id="widget-image-preview"></div>
+        </div>
+    </div>
+    
+    <!-- Direct Upload with Signature -->
+    <div class="container">
+        <h2>3. Direct Upload with Signature</h2>
+        <p>This demonstrates a direct upload with signature from your server.</p>
+        <form id="signed-upload-form">
+            <input type="file" id="signed-file" accept="image/*">
+            <button type="button" id="signed-upload-btn">Upload Image</button>
+        </form>
+        <div id="signed-results">
+            <h3>Uploaded Image:</h3>
+            <div id="signed-image-preview"></div>
+            <div id="signed-image-url"></div>
+        </div>
+    </div>
+
+    <script>
+        // Cloudinary configuration - REPLACE WITH YOUR OWN VALUES
+        const cloudName = 'your_cloud_name';
+        const unsignedUploadPreset = 'your_unsigned_preset'; // For unsigned upload
+        const apiKey = 'your_api_key'; // For signed upload
+        
+        // 1. Unsigned Upload
+        document.getElementById('unsigned-upload-btn').addEventListener('click', function() {
+            const fileInput = document.getElementById('unsigned-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', unsignedUploadPreset);
+            
+            axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData)
+                .then(response => {
+                    const imageUrl = response.data.secure_url;
+                    document.getElementById('unsigned-image-preview').innerHTML = 
+                        `<img src="${imageUrl}" class="image-preview">`;
+                    document.getElementById('unsigned-image-url').textContent = imageUrl;
+                })
+                .catch(error => {
+                    console.error('Upload error:', error);
+                    alert('Upload failed. Check console for details.');
+                });
+        });
+        
+        // 2. Signed Upload with Widget
+        const myWidget = cloudinary.createUploadWidget({
+            cloudName: cloudName,
+            apiKey: apiKey,
+            uploadPreset: 'your_signed_preset', // Replace with your signed preset
+            multiple: true,
+            cropping: true,
+            sources: ['local', 'url', 'camera']
+        }, (error, result) => {
+            if (!error && result && result.event === "success") {
+                const imageUrl = result.info.secure_url;
+                document.getElementById('widget-image-preview').innerHTML += 
+                    `<img src="${imageUrl}" class="image-preview">`;
+            }
+        });
+        
+        document.getElementById("upload_widget").addEventListener("click", function(){
+            myWidget.open();
+        }, false);
+        
+        // 3. Direct Upload with Signature (requires server-side signature)
+        document.getElementById('signed-upload-btn').addEventListener('click', function() {
+            const fileInput = document.getElementById('signed-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            // In a real implementation, you would first call your server to get a signature
+            // For this example, we'll mock it (you need to implement server-side signing)
+            alert('For signed uploads, you need to implement server-side signature generation first.');
+            
+            // Example of what you would do after getting signature from server:
+            /*
+            getSignatureFromServer().then(signatureData => {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('api_key', apiKey);
+                formData.append('timestamp', signatureData.timestamp);
+                formData.append('signature', signatureData.signature);
+                formData.append('upload_preset', 'your_signed_preset');
+                
+                return axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData);
+            })
+            .then(response => {
+                const imageUrl = response.data.secure_url;
+                document.getElementById('signed-image-preview').innerHTML = 
+                    `<img src="${imageUrl}" class="image-preview">`;
+                document.getElementById('signed-image-url').textContent = imageUrl;
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                alert('Upload failed. Check console for details.');
+            });
+            */
+        });
+        
+        // Mock function - replace with actual call to your server
+        function getSignatureFromServer() {
+            // Your server should generate the signature
+            return Promise.resolve({
+                signature: 'generated_signature',
+                timestamp: Date.now()
+            });
+        }
+    </script>
+</body>
+</html>
